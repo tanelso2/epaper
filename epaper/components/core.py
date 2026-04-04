@@ -1,0 +1,305 @@
+from dataclasses import dataclass
+from functools import cached_property
+import logging
+from typing import Sequence, override, Literal
+
+from PIL import ImageDraw
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class BoundingBox:
+    left: int
+    top: int
+    right: int
+    bottom: int
+
+    @property
+    def width(self) -> int:
+        return self.right - self.left
+
+    @property
+    def height(self) -> int:
+        return self.bottom - self.top
+
+    def shift(self, dx: int, dy: int) -> "BoundingBox":
+        return BoundingBox(
+            left=self.left + dx,
+            top=self.top + dy,
+            right=self.right + dx,
+            bottom=self.bottom + dy,
+        )
+
+    def __add__(self, other: "BoundingBox") -> "BoundingBox":
+        return BoundingBox(
+            left=min(self.left, other.left),
+            top=min(self.top, other.top),
+            right=max(self.right, other.right),
+            bottom=max(self.bottom, other.bottom),
+        )
+
+
+class Component:
+    def __init__(self, pos: "Position"):
+        self.pos = pos
+        self._x_pos_calculated = None
+        self._y_pos_calculated = None
+
+    @cached_property
+    def content_bbox(self) -> BoundingBox:
+        """Returns the bounding box of the content of this component, as a tuple of (left, top, right, bottom)"""
+        raise NotImplementedError("Subclasses must implement content_bbox()")
+
+    def draw(self, draw: ImageDraw.ImageDraw) -> None:
+        """Draws this component onto the given ImageDraw object"""
+        raise NotImplementedError("Subclasses must implement draw()")
+
+    @cached_property
+    def x_pos(self) -> int:
+        match self.pos.x:
+            case int():
+                return self.pos.x
+            case AlignedWith(other=other):
+                return other.x_pos
+            case LeftOf(other=other, padding=padding):
+                return other.x_pos - self.width - padding
+            case RightOf(other=other, padding=padding):
+                return other.x_pos + other.width + padding
+            case CenteredOn(other=other):
+                return other.x_pos + (other.width - self.width) // 2
+            case RightAligned(right=right):
+                return right - self.width
+            case RightAlignedWith(other=other):
+                return other.x_pos + other.width - self.width
+            case MatchAlignedWith(other=other):
+                match other.pos.x:
+                    case RightAligned() | RightAlignedWith():
+                        return other.x_pos + other.width - self.width
+                    case _:
+                        return other.x_pos
+            case _:
+                raise ValueError(f"Unsupported PositionType for x: {self.pos.x}")
+
+    @cached_property
+    def y_pos(self) -> int:
+        match self.pos.y:
+            case int():
+                return self.pos.y
+            case AlignedWith(other=other):
+                return other.y_pos
+            case Above(other=other, padding=padding):
+                return other.y_pos - self.height - padding
+            case Below(other=other, padding=padding):
+                return other.y_pos + other.height + padding
+            case CenteredOn(other=other):
+                return other.y_pos + (other.height - self.height) // 2
+            case BottomAligned(bottom=bottom):
+                return bottom - self.height
+            case BottomAlignedWith(other=other):
+                return other.y_pos + other.height - self.height
+            case MatchAlignedWith(other=other):
+                match other.pos.y:
+                    case BottomAligned() | BottomAlignedWith():
+                        return other.y_pos + other.height - self.height
+                    case _:
+                        return other.y_pos
+            case _:
+                raise ValueError(f"Unsupported PositionType for y: {self.pos.y}")
+
+    @property
+    def width(self) -> int:
+        return self.content_bbox.width
+
+    @property
+    def height(self) -> int:
+        return self.content_bbox.height
+
+    @property
+    def position(self) -> tuple[int, int]:
+        return (self.x_pos, self.y_pos)
+
+    @property
+    def bbox(self) -> BoundingBox:
+        bb = self.content_bbox
+        x, y = self.position
+        return bb.shift(x, y)
+
+
+@dataclass
+class AlignedWith:
+    other: Component
+
+
+@dataclass
+class Below:
+    other: Component
+    padding: int = 0
+
+
+@dataclass
+class Above:
+    other: Component
+    padding: int = 0
+
+
+@dataclass
+class LeftOf:
+    other: Component
+    padding: int = 0
+
+
+@dataclass
+class RightOf:
+    other: Component
+    padding: int = 0
+
+
+@dataclass
+class CenteredOn:
+    other: Component
+
+
+@dataclass
+class RightAligned:
+    right: int
+
+
+@dataclass
+class BottomAligned:
+    bottom: int
+
+
+@dataclass
+class RightAlignedWith:
+    other: Component
+
+
+@dataclass
+class BottomAlignedWith:
+    other: Component
+
+
+@dataclass
+class MatchAlignedWith:
+    other: Component
+
+
+type XPosition = (
+    int
+    | AlignedWith
+    | LeftOf
+    | RightOf
+    | CenteredOn
+    | RightAligned
+    | RightAlignedWith
+    | MatchAlignedWith
+)
+type YPosition = (
+    int
+    | AlignedWith
+    | Above
+    | Below
+    | CenteredOn
+    | BottomAligned
+    | BottomAlignedWith
+    | MatchAlignedWith
+)
+
+
+@dataclass
+class Position:
+    x: XPosition
+    y: YPosition
+
+
+class TextComponent(Component):
+    def __init__(self, text: str, font, pos: Position):
+        super().__init__(pos)
+        self.text = text
+        self.font = font
+        self._bbox_calculated = None
+
+    @cached_property
+    @override
+    def content_bbox(self) -> BoundingBox:
+        if not self._bbox_calculated:
+            logger.debug(
+                f"Calculating content_bbox for TextComponent with text: {self.text}"
+            )
+            self._bbox_calculated = 1
+        else:
+            logger.debug(
+                f"Recalculating content_bbox for TextComponent with text: {self.text}. Retry count: {self._bbox_calculated}"
+            )
+            self._bbox_calculated += 1
+        (left, top, right, bottom) = self.font.getbbox(self.text)
+        return BoundingBox(left=left, top=top, right=right, bottom=bottom)
+
+    @override
+    def draw(self, draw):
+        draw.text(self.position, self.text, font=self.font)
+
+
+class CompositeComponent(Component):
+    def __init__(self, children: Sequence[Component], pos: Position):
+        super().__init__(pos)
+        self.children = children
+        self._bbox_calculated = None
+
+    @cached_property
+    @override
+    def content_bbox(self) -> BoundingBox:
+        if not self._bbox_calculated:
+            logger.debug(
+                f"Calculating content_bbox for CompositeComponent with {len(self.children)} children"
+            )
+            self._bbox_calculated = 1
+        else:
+            logger.debug(
+                f"Recalculating content_bbox for CompositeComponent. Retry count: {self._bbox_calculated}"
+            )
+            self._bbox_calculated += 1
+        ret = None
+        for child in self.children:
+            child_bbox = child.bbox
+            if ret is None:
+                ret = child_bbox
+            else:
+                ret += child_bbox
+        if ret is None:
+            return BoundingBox(0, 0, 0, 0)
+        return ret
+
+    @override
+    def draw(self, draw: ImageDraw.ImageDraw):
+        for child in self.children:
+            child.draw(draw)
+
+
+type LabelPos = Literal["left"] | Literal["right"]
+
+
+class LabeledValueComponent(CompositeComponent):
+    def __init__(
+        self,
+        value: str,
+        label: str,
+        value_font,
+        label_font,
+        value_pos: Position,
+        label_pos: LabelPos = "left",
+        padding: int = 10,
+    ):
+        val_component = TextComponent(value, font=value_font, pos=value_pos)
+        if label_pos == "left":
+            label_x_pos = LeftOf(val_component, padding=padding)
+        else:
+            label_x_pos = RightOf(val_component, padding=padding)
+        label_component = TextComponent(
+            label,
+            font=label_font,
+            pos=Position(x=label_x_pos, y=CenteredOn(val_component)),
+        )
+        children = [val_component, label_component]
+        super().__init__(children, pos=value_pos)

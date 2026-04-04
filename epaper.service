@@ -1,0 +1,12 @@
+[Unit]
+Description = "epaper updater"
+
+[Service]
+Type=simple
+Restart=always
+WorkingDirectory=/home/tnelson/epaper
+ExecStart=/home/tnelson/epaper/run.py run
+User=tnelson
+
+[Install]
+WantedBy=network-online.target

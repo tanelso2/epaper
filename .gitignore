@@ -1,0 +1,11 @@
+__pycache__/
+.*.swp
+*.pyc
+**/__pycache__/
+.mypy_cache/
+.pytest_cache/
+.venv/
+openweatherapikey.txt
+output.bmp
+config/latlon.txt
+.cache/
