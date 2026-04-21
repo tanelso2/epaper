@@ -4,6 +4,7 @@ from typing import override
 from epaper.components.core import (
     BottomAligned,
     Component,
+    CompositeComponent,
     Position,
     BoundingBox,
     AlignedWith,
@@ -95,3 +96,21 @@ def test_bottom_aligned():
     c1 = FixedSizeComponent(100, 50, Position(x=200, y=300))
     c2 = FixedSizeComponent(80, 40, Position(x=AlignedWith(c1), y=BottomAligned(400)))
     assert c2.position == (200, 360)
+
+
+class EasyCompositeComponent(CompositeComponent):
+    def __init__(self, children):
+        super().__init__(pos=children[0].pos, children=children)
+
+
+def test_composite_component__content_bbox():
+    base_pos = Position(x=200, y=300)
+    c1 = FixedSizeComponent(100, 50, base_pos)
+    c2 = FixedSizeComponent(80, 40, Position(x=RightOf(c1), y=AlignedWith(c1)))
+    cc = EasyCompositeComponent(children=[c1, c2])
+    expected = BoundingBox.rect(w=180, h=50)
+    assert expected == cc.content_bbox
+    c3 = FixedSizeComponent(20, 20, pos=Position.centered_on(c1))
+    cc = EasyCompositeComponent(children=[c1, c3])
+    expected = BoundingBox.rect(100, 50)
+    assert expected == cc.content_bbox

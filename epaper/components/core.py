@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from functools import cached_property
 import logging
 from typing import Sequence, override, Literal
+from typing_extensions import deprecated
 
 from PIL import ImageDraw
 
@@ -14,6 +15,19 @@ class BoundingBox:
     top: int
     right: int
     bottom: int
+
+    @staticmethod
+    def rect(w: int, h: int) -> "BoundingBox":
+        return BoundingBox(
+            left=0,
+            top=0,
+            right=w,
+            bottom=h,
+        )
+
+    @staticmethod
+    def square(s: int) -> "BoundingBox":
+        return BoundingBox.rect(s, s)
 
     @property
     def width(self) -> int:
@@ -29,6 +43,17 @@ class BoundingBox:
             top=self.top + dy,
             right=self.right + dx,
             bottom=self.bottom + dy,
+        )
+
+    def normalize(self) -> "BoundingBox":
+        """
+        Returns a BoundingBox of the same size but with (0,0) as the upper left corner.
+        """
+        return BoundingBox(
+            left=0,
+            top=0,
+            right=self.width,
+            bottom=self.height,
         )
 
     def __add__(self, other: "BoundingBox") -> "BoundingBox":
@@ -218,21 +243,10 @@ class TextComponent(Component):
         super().__init__(pos)
         self.text = text
         self.font = font
-        self._bbox_calculated = None
 
     @cached_property
     @override
     def content_bbox(self) -> BoundingBox:
-        if not self._bbox_calculated:
-            logger.debug(
-                f"Calculating content_bbox for TextComponent with text: {self.text}"
-            )
-            self._bbox_calculated = 1
-        else:
-            logger.debug(
-                f"Recalculating content_bbox for TextComponent with text: {self.text}. Retry count: {self._bbox_calculated}"
-            )
-            self._bbox_calculated += 1
         (left, top, right, bottom) = self.font.getbbox(self.text)
         return BoundingBox(left=left, top=top, right=right, bottom=bottom)
 
@@ -245,21 +259,10 @@ class CompositeComponent(Component):
     def __init__(self, children: Sequence[Component], pos: Position):
         super().__init__(pos)
         self.children = children
-        self._bbox_calculated = None
 
     @cached_property
     @override
     def content_bbox(self) -> BoundingBox:
-        if not self._bbox_calculated:
-            logger.debug(
-                f"Calculating content_bbox for CompositeComponent with {len(self.children)} children"
-            )
-            self._bbox_calculated = 1
-        else:
-            logger.debug(
-                f"Recalculating content_bbox for CompositeComponent. Retry count: {self._bbox_calculated}"
-            )
-            self._bbox_calculated += 1
         ret = None
         for child in self.children:
             child_bbox = child.bbox
@@ -269,7 +272,7 @@ class CompositeComponent(Component):
                 ret += child_bbox
         if ret is None:
             return BoundingBox(0, 0, 0, 0)
-        return ret
+        return ret.normalize()
 
     @override
     def draw(self, draw: ImageDraw.ImageDraw):
