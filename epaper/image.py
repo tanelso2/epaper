@@ -4,11 +4,12 @@ from PIL import Image, ImageDraw
 
 from epaper.components.core import (
     Above,
-    BottomAligned,
+    CenteredOn,
     Position,
     AlignedWith,
     Below,
-    RightAligned,
+    LeftOf,
+    RightAlignedWith,
 )
 from epaper.components.date import DateComponent
 from epaper.components.fonts import font
@@ -50,18 +51,17 @@ class EPaperImage:
                 pos=Position(x=self.padding, y=Below(time, padding=30)), font_size=20
             )
             weather_data = get_weather()
-            # weather = WeatherComponent(
-            #     pos=Position(x=RightAligned(self.width - self.padding), y=self.padding),
-            #     weather=weather_data,
-            # )
             temp = TemperatureComponent(
-                pos=Position(x=RightAligned(self.width - self.padding), y=self.padding),
+                pos=Position(
+                    x=RightAlignedWith(self.width - self.padding), y=self.padding
+                ),
                 weather=weather_data,
                 value_size=40,
             )
             conditions = ConditionsComponent(
                 pos=Position(
-                    x=RightAligned(self.width - self.padding), y=Below(temp, padding=25)
+                    x=RightAlignedWith(self.width - self.padding),
+                    y=Below(temp, padding=25),
                 ),
                 weather=weather_data,
                 padding=15,
@@ -72,13 +72,12 @@ class EPaperImage:
                 day_padding=10,
             )
             precipitation = PrecipitationBanner(
-                pos=Position(x=self.padding, y=Above(forecast, padding=20)),
+                pos=Position(x=self.padding, y=Above(forecast, padding=15)),
                 weather=weather_data,
             )
             wind = WindComponent(
                 pos=Position(
-                    x=RightAligned(self.width - self.padding),
-                    y=Below(conditions, padding=15),
+                    x=RightAlignedWith(conditions), y=Below(conditions, padding=15)
                 ),
                 weather=weather_data,
             )

@@ -2,18 +2,18 @@ from functools import cached_property
 from typing import override
 
 from epaper.components.core import (
-    BottomAligned,
-    Component,
-    CompositeComponent,
-    Position,
-    BoundingBox,
+    Above,
     AlignedWith,
     Below,
-    Above,
-    LeftOf,
-    RightOf,
+    BottomAlignedWith,
+    BoundingBox,
     CenteredOn,
-    RightAligned,
+    Component,
+    CompositeComponent,
+    LeftOf,
+    Position,
+    RightAlignedWith,
+    RightOf,
 )
 
 
@@ -86,15 +86,19 @@ def test_centered_on():
     assert c2.position == (210, 305)
 
 
-def test_right_aligned():
+def test_right_aligned_with():
     c1 = FixedSizeComponent(100, 50, Position(x=200, y=300))
-    c2 = FixedSizeComponent(80, 40, Position(x=RightAligned(300), y=AlignedWith(c1)))
+    c2 = FixedSizeComponent(
+        80, 40, Position(x=RightAlignedWith(300), y=AlignedWith(c1))
+    )
     assert c2.position == (220, 300)
 
 
-def test_bottom_aligned():
+def test_bottom_aligned_with():
     c1 = FixedSizeComponent(100, 50, Position(x=200, y=300))
-    c2 = FixedSizeComponent(80, 40, Position(x=AlignedWith(c1), y=BottomAligned(400)))
+    c2 = FixedSizeComponent(
+        80, 40, Position(x=AlignedWith(c1), y=BottomAlignedWith(400))
+    )
     assert c2.position == (200, 360)
 
 

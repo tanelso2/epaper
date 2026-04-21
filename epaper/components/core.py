@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from functools import cached_property
 import logging
 from typing import Sequence, override, Literal
-from typing_extensions import deprecated
 
 from PIL import ImageDraw
 
@@ -91,15 +90,19 @@ class Component:
                 return other.x_pos - self.width - padding
             case RightOf(other=other, padding=padding):
                 return other.x_pos + other.width + padding
-            case CenteredOn(other=other):
+            case CenteredOn(other=Component() as other):
                 return other.x_pos + (other.width - self.width) // 2
-            case RightAligned(right=right):
+            case CenteredOn(other=int() as x):
+                return x + (-self.width // 2)
+            case RightAlignedWith(other=int() as right):
                 return right - self.width
-            case RightAlignedWith(other=other):
+            case RightAlignedWith(other=Component() as other):
                 return other.x_pos + other.width - self.width
+            case RightAlignedWith(other=int() as right):
+                return right - self.width
             case MatchAlignedWith(other=other):
                 match other.pos.x:
-                    case RightAligned() | RightAlignedWith():
+                    case RightAlignedWith():
                         return other.x_pos + other.width - self.width
                     case _:
                         return other.x_pos
@@ -117,15 +120,17 @@ class Component:
                 return other.y_pos - self.height - padding
             case Below(other=other, padding=padding):
                 return other.y_pos + other.height + padding
-            case CenteredOn(other=other):
+            case CenteredOn(other=Component() as other):
                 return other.y_pos + (other.height - self.height) // 2
-            case BottomAligned(bottom=bottom):
-                return bottom - self.height
-            case BottomAlignedWith(other=other):
+            case CenteredOn(other=int() as y):
+                return y + (-self.height // 2)
+            case BottomAlignedWith(other=Component() as other):
                 return other.y_pos + other.height - self.height
+            case BottomAlignedWith(other=int() as bottom):
+                return bottom - self.height
             case MatchAlignedWith(other=other):
                 match other.pos.y:
-                    case BottomAligned() | BottomAlignedWith():
+                    case BottomAlignedWith():
                         return other.y_pos + other.height - self.height
                     case _:
                         return other.y_pos
@@ -182,27 +187,17 @@ class RightOf:
 
 @dataclass
 class CenteredOn:
-    other: Component
-
-
-@dataclass
-class RightAligned:
-    right: int
-
-
-@dataclass
-class BottomAligned:
-    bottom: int
+    other: Component | int
 
 
 @dataclass
 class RightAlignedWith:
-    other: Component
+    other: Component | int
 
 
 @dataclass
 class BottomAlignedWith:
-    other: Component
+    other: Component | int
 
 
 @dataclass
@@ -216,7 +211,6 @@ type XPosition = (
     | LeftOf
     | RightOf
     | CenteredOn
-    | RightAligned
     | RightAlignedWith
     | MatchAlignedWith
 )
@@ -226,7 +220,6 @@ type YPosition = (
     | Above
     | Below
     | CenteredOn
-    | BottomAligned
     | BottomAlignedWith
     | MatchAlignedWith
 )
@@ -236,6 +229,14 @@ type YPosition = (
 class Position:
     x: XPosition
     y: YPosition
+
+    @staticmethod
+    def centered_on(other: tuple[int, int] | Component) -> "Position":
+        match other:
+            case Component():
+                return Position(x=CenteredOn(other), y=CenteredOn(other))
+            case (x, y):
+                return Position(x=CenteredOn(x), y=CenteredOn(y))
 
 
 class TextComponent(Component):
