@@ -1,0 +1,2 @@
+BLACK = 0x00
+WHITE = 0xFF

@@ -23,17 +23,16 @@ from epaper.components.weather import (
     ConditionsComponent,
 )
 from epaper.data.weather import get_weather
+import epaper.drawing.colors as colors
 
 logger = logging.getLogger(__name__)
-
-WHITE = 0xFF
 
 
 class EPaperImage:
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self.img = Image.new("1", (self.width, self.height), WHITE)
+        self.img = Image.new("1", (self.width, self.height), colors.WHITE)
         self.draw = ImageDraw.Draw(self.img)
         self.padding = 25
 
