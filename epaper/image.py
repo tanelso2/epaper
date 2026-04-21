@@ -22,6 +22,7 @@ from epaper.components.weather import (
     PrecipitationBanner,
     ForecastComponent,
     ConditionsComponent,
+    WindDirectionArrowComponent,
 )
 from epaper.data.weather import get_weather
 import epaper.drawing.colors as colors
@@ -81,6 +82,14 @@ class EPaperImage:
                 ),
                 weather=weather_data,
             )
+            wind_deg = weather_data.get("wind", {}).get("deg")
+            wind_arrow = WindDirectionArrowComponent(
+                pos=Position(x=LeftOf(wind, padding=12), y=CenteredOn(wind)),
+                wind_deg=wind_deg,
+                arrow_length=55.0,
+                arm_length=15.0,
+                label_padding=5.0,
+            )
             sunlight = SunlightComponent(
                 pos=Position(
                     x=self.padding,
@@ -101,6 +110,7 @@ class EPaperImage:
             forecast,
             precipitation,
             wind,
+            wind_arrow,
         ]
         for c in components:
             try:

@@ -1,11 +1,16 @@
 from datetime import datetime
+from functools import cached_property
 import logging
+import math
 from typing import override, List
+
+from PIL import ImageDraw
 
 from epaper.components.core import (
     AlignedWith,
     Below,
     BottomAlignedWith,
+    BoundingBox,
     CenteredOn,
     Component,
     CompositeComponent,
@@ -18,9 +23,13 @@ from epaper.components.core import (
     TextComponent,
 )
 from epaper.components.fonts import font
+from epaper.components.shapes import CircleComponent, RotatingArrowComponent
 from epaper.data.location import tz
 from epaper.data.weather import get_weather, get_5_day_forecast
+from epaper.drawing.arrow import draw_arrow
+from epaper.utils.angles import add_degrees, invert_degrees, invert_y, project_from
 from epaper.utils.wind import cardinal_direction
+import epaper.utils.wind_direction_constants as dirs
 
 logger = logging.getLogger(__name__)
 
@@ -281,7 +290,7 @@ class WindComponent(CompositeComponent):
         wind = self.weather.get("wind")
         if not wind:
             raise ValueError("Could not get wind from weather")
-        wind = wind
+        self.wind = wind
         wind_speed = wind["speed"]
         wind_deg = wind["deg"]
         wind_str = f"{wind_speed:.2f} mph {cardinal_direction(wind_deg)}"
@@ -305,3 +314,68 @@ class WindComponent(CompositeComponent):
             )
             children.append(gust_comp)
         super().__init__(children, pos=pos)
+
+
+# Change this based on the configuration of your display.
+# Mine is facing East
+DISPLAY_UP_DIRECTION = dirs.E
+
+
+class WindDirectionArrowComponent(CompositeComponent):
+    def __init__(
+        self,
+        pos: Position,
+        wind_deg: float,
+        arrow_length: float = 40.0,
+        arm_length: float = 5.0,
+        padding: int = 5,
+        line_width: int = 5,
+        label_padding: float = 3.5,
+        label_size: int = 12,
+    ):
+        radius = arrow_length / 2.0
+        circle = CircleComponent(pos=pos, radius=radius, padding=padding)
+        center = circle.center
+        arrow = RotatingArrowComponent(
+            pos=Position.centered_on(circle),
+            arrow_deg=self._arrow_degs_from_wind(wind_deg),
+            arrow_length=arrow_length,
+            arm_length=arm_length,
+            line_width=line_width,
+        )
+        children = [arrow, circle]
+
+        label_font = font(size=label_size)
+        north = self.north_deg
+        degs = [add_degrees(north, 90.0 * i) for i in range(4)]
+        deg_names = ["N", "W", "S", "E"]
+        for deg, label in zip(degs, deg_names):
+            logger.debug(f"{circle.center=}")
+            x, y = project_from(
+                center, length=(circle.size / 2.0) + label_padding, deg=invert_y(deg)
+            )
+            label_pos = (int(x), int(y))
+            comp = TextComponent(
+                label, font=label_font, pos=Position.centered_on(label_pos)
+            )
+            children.append(comp)
+
+        super().__init__(children, pos)
+
+    def _arrow_degs_from_wind(self, wind_deg: float) -> float:
+        """
+        Calculate the way the arrow should face based on the direction of the wind
+        """
+        # Flip the y direction since wind degrees rotate clockwise instead of anti-clockwise
+        r1 = invert_y(wind_deg)
+        # Rotate by 90 degrees to point North up
+        r2 = add_degrees(r1, 90.0)
+        # Rotate an additional amount so the arrow is correctly oriented with the display
+        r3 = add_degrees(r2, DISPLAY_UP_DIRECTION)
+        # Flip the arrow backwards since the tail of the arrow should be where the wind is coming from
+        r4 = invert_degrees(r3)
+        return r4
+
+    @property
+    def north_deg(self):
+        return add_degrees(90.0, DISPLAY_UP_DIRECTION)
