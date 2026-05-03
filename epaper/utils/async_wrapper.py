@@ -54,13 +54,14 @@ class SyncToAsyncWrapper[T]:
         pool: Executor | PoolConfig | None = None,
     ):
         self._obj = obj
-        p = pool or PoolConfig.default()
-        match p:
-            case Executor():
-                self._pool = p
+        if pool is None:
+            pool = PoolConfig.default()
+        match pool:
+            case Executor() as ex:
+                self._pool = ex
                 self._owns_pool = False
-            case PoolConfig():
-                self._pool = p.make_pool()
+            case PoolConfig() as pc:
+                self._pool = pc.make_pool()
                 self._owns_pool = True
 
     def __del__(self):
@@ -68,7 +69,7 @@ class SyncToAsyncWrapper[T]:
             self._pool.shutdown(wait=False, cancel_futures=True)
 
     def __getattr__(self, name):
-        method = getattr(self._obj, name)
+        method = getattr(self._obj, name, None)
         if not method:
             raise AttributeError(
                 f"Could not find {name} on object {self._obj} of type {type(self._obj)}"
@@ -90,7 +91,7 @@ class AsyncToSyncWrapper[T]:
         self._inner = obj
 
     def __getattr__(self, name):
-        method = getattr(self._inner, name)
+        method = getattr(self._inner, name, None)
         if not method:
             raise AttributeError(
                 f"Could not find {name} on object {self._inner} of type {type(self._inner)}"

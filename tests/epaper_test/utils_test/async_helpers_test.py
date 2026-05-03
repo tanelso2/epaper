@@ -2,6 +2,7 @@ from concurrent.futures import ProcessPoolExecutor
 import pytest
 
 from epaper.utils.async_wrapper import (
+    PoolConfig,
     SyncToAsyncWrapper,
     AsyncToSyncWrapper,
     run_sync_method_in_async_pool,
@@ -65,9 +66,12 @@ def test_AsyncToSyncWrapper():
     assert wrapped.bar() == 3
     assert wrapped.add(3) == 8
     assert wrapped.s() == 4
+
     assert wrapped.field == 20
     with pytest.raises(ValueError):
         wrapped.exn()
+    with pytest.raises(AttributeError):
+        wrapped.does_not_exist()
 
 
 @pytest.mark.asyncio
@@ -78,10 +82,7 @@ async def test_run_sync_method_in_async_pool():
     assert result == 12
 
 
-@pytest.mark.asyncio
-async def test_SyncToAsyncWrapper():
-    foo = ExampleSync()
-    wrapped = SyncToAsyncWrapper(foo)
+async def run_async_wrapper_tests(wrapped: SyncToAsyncWrapper[ExampleSync]):
     x = await wrapped.add(1, 2)
     assert x == 3
     bar = await wrapped.bar()
@@ -96,3 +97,29 @@ async def test_SyncToAsyncWrapper():
     assert v == 5
     with pytest.raises(ValueError):
         await wrapped.exn()
+    with pytest.raises(AttributeError):
+        await wrapped.does_not_exist()
+
+
+@pytest.mark.asyncio
+async def test_SyncToAsyncWrapper_default_pool():
+    foo = ExampleSync()
+    wrapped = SyncToAsyncWrapper(foo)
+    await run_async_wrapper_tests(wrapped)
+
+
+@pytest.mark.asyncio
+async def test_SyncToAsyncWrapper_threaded_pool():
+    foo = ExampleSync()
+    wrapped = SyncToAsyncWrapper(
+        foo, pool=PoolConfig(pool_mode="thread", max_workers=1)
+    )
+    await run_async_wrapper_tests(wrapped)
+
+
+@pytest.mark.asyncio
+async def test_SyncToAsyncWrapper_outside_pool():
+    pool = ProcessPoolExecutor(max_workers=1)
+    foo = ExampleSync()
+    wrapped = SyncToAsyncWrapper(foo, pool=pool)
+    await run_async_wrapper_tests(wrapped)
