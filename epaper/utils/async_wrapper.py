@@ -1,8 +1,9 @@
 import asyncio
-from concurrent.futures import ProcessPoolExecutor
-from functools import partial
 import inspect
-from typing import Awaitable, Any, Coroutine
+from concurrent.futures import Executor, ProcessPoolExecutor, ThreadPoolExecutor
+from dataclasses import dataclass
+from functools import partial
+from typing import Literal
 
 
 def run_async_method_sync(m, *args, **kwargs):
@@ -19,17 +20,52 @@ async def lift_value_async[T](v: T) -> T:
     return v
 
 
+type PoolMode = Literal["thread", "process"]
+
+
+@dataclass
+class PoolConfig:
+    pool_mode: PoolMode
+    max_workers: int
+
+    @staticmethod
+    def default():
+        return PoolConfig(pool_mode="process", max_workers=1)
+
+    def make_pool(self) -> Executor:
+        match self.pool_mode:
+            case "process":
+                return ProcessPoolExecutor(max_workers=self.max_workers)
+            case "thread":
+                return ThreadPoolExecutor(max_workers=self.max_workers)
+
+
 class SyncToAsyncWrapper[T]:
     """
     Wraps an object with synchronous methods and runs them in another thread or process while returning Futures to be awaited on in the main event loop
     """
 
-    def __init__(self, obj: T, pool=None):
+    _pool: Executor
+    _owns_pool: bool
+
+    def __init__(
+        self,
+        obj: T,
+        pool: Executor | PoolConfig | None = None,
+    ):
         self._obj = obj
-        self._pool = pool or ProcessPoolExecutor(max_workers=1)
+        p = pool or PoolConfig.default()
+        match p:
+            case Executor():
+                self._pool = p
+                self._owns_pool = False
+            case PoolConfig():
+                self._pool = p.make_pool()
+                self._owns_pool = True
 
     def __del__(self):
-        self._pool.shutdown(wait=False, cancel_futures=True)
+        if self._owns_pool:
+            self._pool.shutdown(wait=False, cancel_futures=True)
 
     def __getattr__(self, name):
         method = getattr(self._obj, name)
