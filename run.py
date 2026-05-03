@@ -96,7 +96,7 @@ async def async_update_loop(
                 logger.error("Error generating image", exc_info=err)
             case Image.Image():
                 logger.info("Resetting display")
-                await reset_strategy.async_reset_display(e)
+                await reset_strategy.reset_display(e)
                 logger.info("Writing new image")
                 await e.display_full_partial(img)
         logger.debug("Sleeping for %d seconds", update_delay)
