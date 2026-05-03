@@ -1,6 +1,6 @@
 import logging
 import sys
-from typing import Optional, cast
+from typing import Optional
 
 from PIL import Image
 
@@ -45,6 +45,9 @@ class AsyncEPDWrapper:
         await self._async.init()
         await self._async.init_part()
 
+    async def clear(self):
+        await self._async.Clear()
+
 
 def get_display_wrapper(use_mock: bool = False) -> AsyncEPDWrapper:
     inst = get_display_instance(use_mock=use_mock)
@@ -66,7 +69,7 @@ def get_display_instance(use_mock: bool = False) -> EPDDisplay:
         except ImportError as err:
             logger.error(
                 "Could not import epd library, are you running on a Raspberry Pi with the proper libraries installed?",
-                exc_info=err
+                exc_info=err,
             )
             sys.exit(1)
 
