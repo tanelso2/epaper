@@ -9,3 +9,5 @@ openweatherapikey.txt
 output.bmp
 config/latlon.txt
 .cache/
+htmlcov/
+.coverage
