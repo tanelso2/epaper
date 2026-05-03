@@ -1,2 +1,2 @@
-BLACK = 0x00
-WHITE = 0xFF
+BLACK: int = 0x00
+WHITE: int = 0xFF
