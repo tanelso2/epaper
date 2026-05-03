@@ -10,6 +10,7 @@ from typing import Callable, Optional
 import click
 from PIL import Image
 
+import epaper.display.resets as resets
 from epaper.drawing.components import ImagePlanner, ImagePlannerConstructor
 from epaper.drawing.images.burn_in import BurnInImagePlanner
 from epaper.drawing.images.epaper import EPaperImagePlanner
@@ -75,6 +76,9 @@ def update_loop():
         time.sleep(UPDATE_DELAY)
 
 
+reset_strategy: resets.ResetStrategy = resets.ResetByReInit()
+
+
 async def async_update_loop(
     image_planner_builder: ImagePlannerConstructor,
     update_delay: float = UPDATE_DELAY,
@@ -91,6 +95,8 @@ async def async_update_loop(
             case Exception() as err:
                 logger.error("Error generating image", exc_info=err)
             case Image.Image():
+                logger.info("Resetting display")
+                await reset_strategy.async_reset_display(e)
                 logger.info("Writing new image")
                 await e.display_full_partial(img)
         logger.debug("Sleeping for %d seconds", update_delay)
