@@ -11,6 +11,7 @@ import click
 from PIL import Image
 
 from epaper.drawing.components import ImagePlanner, ImagePlannerConstructor
+from epaper.drawing.images.burn_in import BurnInImagePlanner
 from epaper.drawing.images.epaper import EPaperImagePlanner
 from epaper.display.helpers import reset_screen, display_full_Partial
 from epaper.display.wrapper import get_display_instance, get_display_wrapper
@@ -118,6 +119,16 @@ def generate():
             sys.exit(1)
         case Image.Image():
             img.save("output.bmp")
+
+
+@cli.command()
+def burn_in_test():
+    update_delay = 0.25 if UPDATE_DELAY == DEFAULT_UPDATE_DELAY else UPDATE_DELAY
+    loop = asyncio.new_event_loop()
+    loop.create_task(
+        async_update_loop(BurnInImagePlanner.construct, update_delay=update_delay)
+    )
+    loop.run_forever()
 
 
 if __name__ == "__main__":
