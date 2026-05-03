@@ -55,6 +55,9 @@ class BoundingBox:
             bottom=self.height,
         )
 
+    def is_normalized(self) -> bool:
+        return self.left == 0 and self.top == 0
+
     def __add__(self, other: "BoundingBox") -> "BoundingBox":
         return BoundingBox(
             left=min(self.left, other.left),
@@ -62,6 +65,10 @@ class BoundingBox:
             right=max(self.right, other.right),
             bottom=max(self.bottom, other.bottom),
         )
+
+    @property
+    def corners(self) -> list[tuple[int, int]]:
+        return [(self.left, self.top), (self.right, self.bottom)]
 
 
 class Component:
