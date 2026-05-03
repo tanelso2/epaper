@@ -1,44 +1,48 @@
 import logging
-
-from PIL import Image, ImageDraw
+from typing import override
 
 from epaper.components.core import (
-    Above,
-    CenteredOn,
+    Component,
     Position,
     AlignedWith,
     Below,
+    Above,
     LeftOf,
+    CenteredOn,
     RightAlignedWith,
 )
-from epaper.components.date import DateComponent
+from epaper.drawing.components import ImagePlanner
 from epaper.components.fonts import font
-from epaper.components.time import TimeComponent
+from epaper.components.date import DateComponent
 from epaper.components.network import NetworkComponent
 from epaper.components.sunlight import SunlightComponent
+from epaper.components.time import TimeComponent
 from epaper.components.weather import (
     TemperatureComponent,
-    WindComponent,
-    PrecipitationBanner,
-    ForecastComponent,
     ConditionsComponent,
+    ForecastComponent,
+    PrecipitationBanner,
+    WindComponent,
     WindDirectionArrowComponent,
 )
 from epaper.data.weather import get_weather
-import epaper.drawing.colors as colors
 
 logger = logging.getLogger(__name__)
 
 
-class EPaperImage:
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
-        self.img = Image.new("1", (self.width, self.height), colors.WHITE)
-        self.draw = ImageDraw.Draw(self.img)
-        self.padding = 25
+class EPaperImagePlanner(ImagePlanner):
+    def __init__(
+        self,
+        width: int,
+        height: int,
+        padding: int = 30,
+        draw_outlines: bool = False,
+    ):
+        self.padding = padding
+        super().__init__(width=width, height=height, draw_outlines=draw_outlines)
 
-    def generate(self) -> Image.Image | Exception:
+    @override
+    def create_components(self) -> dict[str, Component]:
         try:
             logger.debug("Initializing components")
             date = DateComponent(
@@ -97,25 +101,20 @@ class EPaperImage:
                 ),
                 font_size=28,
             )
-        except Exception as _:
-            logger.exception("Error initializing components")
-            return Exception("Error initializing components")
-        components = [
-            date,
-            time,
-            sunlight,
-            temp,
-            network,
-            conditions,
-            forecast,
-            precipitation,
-            wind,
-            wind_arrow,
-        ]
-        for c in components:
-            try:
-                logger.debug(f"Drawing component: {c}")
-                c.draw(self.draw)
-            except Exception:
-                logger.exception(f"Error drawing component: {c}")
-        return self.img
+        except Exception as e:
+            logger.error("Error initializing components")
+            raise e
+
+        components = {
+            "date": date,
+            "time": time,
+            "sunlight": sunlight,
+            "temp": temp,
+            "network": network,
+            "conditions": conditions,
+            "forecast": forecast,
+            "precipitation": precipitation,
+            "wind": wind,
+            "wind_arrow": wind_arrow,
+        }
+        return components

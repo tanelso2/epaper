@@ -2,13 +2,16 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import logging
+from functools import partial
 import sys
 import time
+from typing import Callable, Optional
 
 import click
 from PIL import Image
 
-from epaper.image import EPaperImage
+from epaper.drawing.components import ImagePlanner, ImagePlannerConstructor
+from epaper.drawing.images.epaper import EPaperImagePlanner
 from epaper.display.helpers import reset_screen, display_full_Partial
 from epaper.display.wrapper import get_display_instance, get_display_wrapper
 
@@ -19,9 +22,11 @@ logger = logging.getLogger(__name__)
 DEFAULT_WIDTH = 800
 DEFAULT_HEIGHT = 480
 
-UPDATE_DELAY = 15.0
+DEFAULT_UPDATE_DELAY = 15.0
 
 using_mock_display = False
+drawing_bounding_boxes = False
+UPDATE_DELAY = DEFAULT_UPDATE_DELAY
 
 
 @click.group()
@@ -31,9 +36,17 @@ using_mock_display = False
     is_flag=True,
     help="Allow using the mock display driver. Will exit with an error code if this is not set and it fails to load the display drivers",
 )
-def cli(debug, use_mock_display):
-    global using_mock_display
+@click.option(
+    "--draw-bounding-boxes",
+    is_flag=True,
+    help="Draw the bounding boxes for all components",
+)
+@click.option("--update-delay", type=float, default=DEFAULT_UPDATE_DELAY)
+def cli(debug, use_mock_display, draw_bounding_boxes, update_delay):
+    global using_mock_display, drawing_bounding_boxes, UPDATE_DELAY
     using_mock_display = use_mock_display
+    drawing_bounding_boxes = draw_bounding_boxes
+    UPDATE_DELAY = update_delay
     if debug:
         logging.basicConfig(level=logging.DEBUG)
     else:
@@ -42,34 +55,45 @@ def cli(debug, use_mock_display):
 
 def update_loop():
     e = get_display_instance(use_mock=using_mock_display)
+    image_planner = EPaperImagePlanner(
+        width=e.width, height=e.height, draw_outlines=drawing_bounding_boxes
+    )
     e.init()
     reset_screen(e)
     logger.info(f"{e.width=} {e.height=}")
     e.init_part()
     while True:
-        img = EPaperImage(e.width, e.height).generate()
+        img = image_planner.generate()
         match img:
             case Exception() as err:
                 logger.error("Error generating image", exc_info=err)
             case Image.Image():
                 logger.info("Writing new image")
                 display_full_Partial(e, img)
+        logger.debug("Sleeping for %d seconds", UPDATE_DELAY)
         time.sleep(UPDATE_DELAY)
 
 
-async def async_update_loop():
+async def async_update_loop(
+    image_planner_builder: ImagePlannerConstructor,
+    update_delay: float = UPDATE_DELAY,
+):
     e = get_display_wrapper(use_mock=using_mock_display)
+    image_planner = image_planner_builder(
+        e.width, e.height, draw_outlines=drawing_bounding_boxes
+    )
     await e.init()
     await e.blank_screen()
     while True:
-        img = EPaperImage(e.width, e.height).generate()
+        img = image_planner.generate()
         match img:
             case Exception() as err:
                 logger.error("Error generating image", exc_info=err)
             case Image.Image():
                 logger.info("Writing new image")
                 await e.display_full_partial(img)
-        await asyncio.sleep(UPDATE_DELAY)
+        logger.debug("Sleeping for %d seconds", update_delay)
+        await asyncio.sleep(update_delay)
 
 
 @cli.command()
@@ -80,12 +104,14 @@ def run():
 @cli.command()
 def run_async():
     loop = asyncio.new_event_loop()
-    loop.run_until_complete(async_update_loop())
+    loop.create_task(async_update_loop(EPaperImagePlanner.construct))
+    loop.run_forever()
 
 
 @cli.command()
 def generate():
-    img = EPaperImage(DEFAULT_WIDTH, DEFAULT_HEIGHT).generate()
+    image_planner = EPaperImagePlanner(width=DEFAULT_WIDTH, height=DEFAULT_HEIGHT)
+    img = image_planner.generate()
     match img:
         case Exception() as err:
             logger.error("Error generating image", exc_info=err)
