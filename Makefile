@@ -9,6 +9,9 @@ test:
 typecheck:
 	python -m mypy run.py
 
+new-example:
+	python run.py --debug generate --output-file examples/example.bmp
+
 install-systemd:
 	@echo "Installing systemd service..."
 	@sudo ln -sf $(PWD)/epaper.service /etc/systemd/system/epaper.service

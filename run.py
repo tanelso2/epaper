@@ -116,7 +116,8 @@ def run_async():
 
 
 @cli.command()
-def generate():
+@click.option("--output-file", type=str, default="output.bmp")
+def generate(output_file: str):
     image_planner = EPaperImagePlanner(width=DEFAULT_WIDTH, height=DEFAULT_HEIGHT)
     img = image_planner.generate()
     match img:
@@ -124,7 +125,7 @@ def generate():
             logger.error("Error generating image", exc_info=err)
             sys.exit(1)
         case Image.Image():
-            img.save("output.bmp")
+            img.save(output_file)
 
 
 @cli.command()
