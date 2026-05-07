@@ -11,6 +11,9 @@ An epaper display based on waveshare displays and a Raspberry Pi
 
 ![Example display output](examples/example.bmp)
 ![Picture of the actual display](/examples/display-photo.jpg)
+Thank you to my father for helping me build the frame!
+
+(Read: he did most of the work while I tried to absorb his knowledge)
 
 ## Requirements
 
