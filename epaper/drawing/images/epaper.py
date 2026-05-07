@@ -25,7 +25,7 @@ from epaper.components.weather import (
     WindComponent,
     WindDirectionArrowComponent,
 )
-from epaper.data.weather import get_weather
+from epaper.data.weather import get_current_weather
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class EPaperImagePlanner(ImagePlanner):
             network = NetworkComponent(
                 pos=Position(x=self.padding, y=Below(time, padding=30)), font_size=20
             )
-            weather_data = get_weather()
+            weather_data = get_current_weather()
             temp = TemperatureComponent(
                 pos=Position(
                     x=RightAlignedWith(self.width - self.padding), y=self.padding
@@ -86,7 +86,7 @@ class EPaperImagePlanner(ImagePlanner):
                 ),
                 weather=weather_data,
             )
-            wind_deg = weather_data.get("wind", {}).get("deg")
+            wind_deg = weather_data.wind.deg
             wind_arrow = WindDirectionArrowComponent(
                 pos=Position(x=LeftOf(wind, padding=12), y=CenteredOn(wind)),
                 wind_deg=wind_deg,

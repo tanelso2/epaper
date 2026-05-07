@@ -2,7 +2,7 @@ from datetime import datetime
 from functools import cached_property
 import logging
 import math
-from typing import override, List
+from typing import override, List, Optional
 
 from PIL import ImageDraw
 
@@ -25,7 +25,11 @@ from epaper.components.core import (
 from epaper.components.fonts import font
 from epaper.components.shapes import CircleComponent, RotatingArrowComponent
 from epaper.data.location import tz
-from epaper.data.weather import get_weather, get_5_day_forecast
+from epaper.data.weather import (
+    CurrentWeather,
+    get_current_weather,
+    get_5_day_forecast,
+)
 from epaper.drawing.arrow import draw_arrow
 from epaper.utils.angles import add_degrees, invert_degrees, invert_y, project_from
 from epaper.utils.wind import cardinal_direction
@@ -44,6 +48,10 @@ def ts(t):
 
 
 class TemperatureComponent(CompositeComponent):
+    weather: CurrentWeather
+    curr_temp: float
+    feels_like: float
+
     def __init__(
         self,
         pos: Position,
@@ -56,10 +64,10 @@ class TemperatureComponent(CompositeComponent):
         self.value_font = font(size=value_size)
         self.padding = padding
         self.pos = pos
-        self.weather = weather or get_weather()
-        main = self.weather.get("main", {})
-        self.curr_temp = main.get("temp")
-        self.feels_like = main.get("feels_like")
+        self.weather = weather or get_current_weather()
+        main = self.weather.main
+        self.curr_temp = main.temp
+        self.feels_like = main.feels_like
         children = self.make_children()
         super().__init__(children, pos=pos)
 
@@ -95,32 +103,35 @@ class TemperatureComponent(CompositeComponent):
 
 
 class WeatherComponent(CompositeComponent):
+    weather: CurrentWeather
+
     def __init__(
-        self, pos: Position, label_font=None, val_font=None, padding=30, weather=None
+        self,
+        pos: Position,
+        label_font=None,
+        val_font=None,
+        padding=30,
+        weather: Optional[CurrentWeather] = None,
     ):
         self.label_font = label_font or font(size=24)
         self.val_font = val_font or font(size=32)
         self.padding = padding
         self.pos = pos
-        self.weather = weather or get_weather()
+        self.weather = weather or get_current_weather()
         children = self.make_children()
         super().__init__(children, pos=pos)
 
     def make_children(self) -> list[Component]:
-        main = self.weather.get("main", {})
-        curr_temp = main.get("temp")
-        max_temp = main.get("temp_max")
-        min_temp = main.get("temp_min")
-        humidity = main.get("humidity")
-        pressure = main.get("pressure")
-        feels_like = main.get("feels_like")
-        sys = self.weather.get("sys", {})
-        sunrise = sys.get("sunrise")
-        sunset = sys.get("sunset")
-        conditions = self.weather.get("weather", [])[0]
-        cond_name = conditions.get("main")
-        cond_desc = conditions.get("description")
-        cond_icon = conditions.get("icon")
+        main = self.weather.main
+        curr_temp = main.temp
+        humidity = main.humidity
+        pressure = main.pressure
+        feels_like = main.feels_like
+        sys = self.weather.sys
+        sunrise = sys.sunrise
+        sunset = sys.sunset
+        conditions = self.weather.conditions
+        cond_desc = conditions.description
 
         components = {
             "Current": cond_desc,
@@ -160,13 +171,13 @@ class WeatherComponent(CompositeComponent):
 
 class PrecipitationBanner(TextComponent):
     def __init__(self, pos: Position, weather=None):
-        self.weather = weather or get_weather()
+        self.weather = weather or get_current_weather()
         msgs = []
-        if "rain" in self.weather:
-            rain = self.weather["rain"].get("1h")
+        if self.weather.rain is not None:
+            rain = self.weather.rain.one_hour
             msgs.append(f"Rain in last hour: {rain} mm")
-        if "snow" in self.weather:
-            snow = self.weather["snow"].get("1h")
+        if self.weather.snow is not None:
+            snow = self.weather.snow.one_hour
             msgs.append(f"Snow in last hour: {snow} mm")
         self.msgs = msgs
         text = "\n".join(msgs)
@@ -226,6 +237,8 @@ class ForecastComponent(CompositeComponent):
 
 
 class ConditionsComponent(CompositeComponent):
+    weather: CurrentWeather
+
     def __init__(
         self,
         pos: Position,
@@ -239,14 +252,12 @@ class ConditionsComponent(CompositeComponent):
         self.label_padding = label_padding
         self.label_font = font(size=label_size)
         self.value_font = font(size=value_size)
-        self.weather = weather or get_weather()
-        main = self.weather.get("main", {})
-        humidity = main.get("humidity")
-        pressure = main.get("pressure")
-        conditions = self.weather.get("weather", [])
-        if len(conditions) < 1:
-            raise ValueError("Could not get conditions from weather data")
-        cond_desc = conditions[0].get("description")
+        self.weather = weather or get_current_weather()
+        main = self.weather.main
+        humidity = main.humidity
+        pressure = main.pressure
+        conditions = self.weather.conditions
+        cond_desc = conditions.description
         desc_comp = TextComponent(cond_desc, font=self.value_font, pos=pos)
         components = {"Humidity": f"{humidity}%", "Pressure": f"{pressure} hPa"}
 
@@ -286,13 +297,10 @@ class WindComponent(CompositeComponent):
         self.label_padding = label_padding
         self.label_font = font(size=label_size)
         self.value_font = font(size=value_size)
-        self.weather = weather or get_weather()
-        wind = self.weather.get("wind")
-        if not wind:
-            raise ValueError("Could not get wind from weather")
-        self.wind = wind
-        wind_speed = wind["speed"]
-        wind_deg = wind["deg"]
+        self.weather = weather or get_current_weather()
+        self.wind = self.weather.wind
+        wind_speed = self.wind.speed
+        wind_deg = self.wind.deg
         wind_str = f"{wind_speed:.2f} mph {cardinal_direction(wind_deg)}"
         comp = LabeledValueComponent(
             value=wind_str,
@@ -304,8 +312,7 @@ class WindComponent(CompositeComponent):
             padding=padding,
         )
         children: List[Component] = [comp]
-        if "gust" in wind:
-            gust_speed = wind["gust"]
+        if gust_speed := self.wind.gust:
             gust_str = f"Up to {gust_speed:.2f} mph"
             gust_comp = TextComponent(
                 text=gust_str,
