@@ -2,12 +2,15 @@
 
 An epaper display based on waveshare displays and a Raspberry Pi
 
-![Example display output](examples/example.bmp)
-
 - Current date and time
 - Weather (temperature, conditions, wind, precipitation, 5-day forecast)
 - Sunrise/sunset times
 - Network info
+
+## Images
+
+![Example display output](examples/example.bmp)
+![Picture of the actual display](/examples/display-photo.jpg)
 
 ## Requirements
 
