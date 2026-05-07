@@ -32,3 +32,22 @@ class BoundingBoxComponent(Component):
         draw.rectangle(
             box.corners, width=self.line_thickness, fill=None, outline=colors.BLACK
         )
+
+
+class FailingComponent(Component):
+    def __init__(self, raise_on_construct: bool = False):
+        if raise_on_construct:
+            raise ValueError("Purposefully failing to create a FailingComponent")
+
+        super().__init__(pos=Position(0, 0))
+
+    @cached_property
+    @override
+    def content_bbox(self) -> BoundingBox:
+        return BoundingBox.square(0)
+
+    @override
+    def draw(self, draw: ImageDraw.ImageDraw) -> None:
+        raise NotImplementedError(
+            "FailingComponent.draw() is intentionally left unimplemented"
+        )
