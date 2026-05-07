@@ -219,6 +219,7 @@ class ForecastComponent(CompositeComponent):
         for i in range(0, min(count * 2, len(forecasts)), 2):
             forecast = forecasts[i]
             if prev is None:
+                logger.debug("Using %s for the first ForecastSummary", pos)
                 curr_pos = pos
             else:
                 curr_pos = Position(

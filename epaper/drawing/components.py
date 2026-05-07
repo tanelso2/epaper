@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from functools import cached_property
 import logging
 from typing import Optional, Protocol
 
@@ -40,6 +41,7 @@ def generate_image(
 class ImagePlanner(ABC):
     width: int
     height: int
+    edge_padding: int
     draw_outlines: bool
     _top_components: dict[str, Component]
     _bottom_components: dict[str, Component]
@@ -48,7 +50,14 @@ class ImagePlanner(ABC):
     _curr_components: dict[str, Component]
     _curr_image: Optional[Image.Image]
 
-    def __init__(self, width: int, height: int, draw_outlines: bool = False):
+    def __init__(
+        self,
+        width: int,
+        height: int,
+        draw_outlines: bool = False,
+        edge_padding: int = 0,
+    ):
+        self.edge_padding = edge_padding
         self.width = width
         self.height = height
         self.draw_outlines = draw_outlines
@@ -58,12 +67,30 @@ class ImagePlanner(ABC):
         self._top_components = {}
         self._curr_image = None
 
-    @property
-    def center(self) -> tuple[int, int]:
-        return (self.width // 2, self.height // 2)
-
+    # ABSTRACT METHODS
     @abstractmethod
     def create_components(self) -> dict[str, Component]: ...
+
+    # DEFAULT IMPLEMENTATIONS
+    @cached_property
+    def left_edge(self) -> int:
+        return self.edge_padding
+
+    @cached_property
+    def right_edge(self) -> int:
+        return self.width - self.edge_padding
+
+    @cached_property
+    def top_edge(self) -> int:
+        return self.edge_padding
+
+    @cached_property
+    def bottom_edge(self) -> int:
+        return self.height - self.edge_padding
+
+    @cached_property
+    def center(self) -> tuple[int, int]:
+        return (self.width // 2, self.height // 2)
 
     def generate(self) -> Image.Image:
         self._prev_components = self._curr_components

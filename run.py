@@ -125,6 +125,7 @@ def generate(output_file: str):
             logger.error("Error generating image", exc_info=err)
             sys.exit(1)
         case Image.Image():
+            logger.info("Saving generated image to %s", output_file)
             img.save(output_file)
 
 

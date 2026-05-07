@@ -1,7 +1,9 @@
+from functools import cached_property
 import logging
 from typing import override
 
 from epaper.components.core import (
+    BottomAlignedWith,
     Component,
     Position,
     AlignedWith,
@@ -35,49 +37,55 @@ class EPaperImagePlanner(ImagePlanner):
         self,
         width: int,
         height: int,
-        padding: int = 30,
+        edge_padding: int = 30,
         draw_outlines: bool = False,
     ):
-        self.padding = padding
-        super().__init__(width=width, height=height, draw_outlines=draw_outlines)
+        super().__init__(
+            width=width,
+            height=height,
+            draw_outlines=draw_outlines,
+            edge_padding=edge_padding,
+        )
 
     @override
     def create_components(self) -> dict[str, Component]:
         try:
             logger.debug("Initializing components")
             date = DateComponent(
-                font(size=52), pos=Position(x=self.padding, y=self.padding)
+                font(size=52), pos=Position(x=self.left_edge, y=self.top_edge)
             )
             time = TimeComponent(
                 font(size=90),
                 pos=Position(x=AlignedWith(date), y=Below(date, padding=20)),
             )
             network = NetworkComponent(
-                pos=Position(x=self.padding, y=Below(time, padding=30)), font_size=20
+                pos=Position(x=self.left_edge, y=Below(time, padding=30)), font_size=20
             )
             weather_data = get_current_weather()
             temp = TemperatureComponent(
-                pos=Position(
-                    x=RightAlignedWith(self.width - self.padding), y=self.padding
-                ),
+                pos=Position(x=RightAlignedWith(self.right_edge), y=self.top_edge),
                 weather=weather_data,
                 value_size=40,
             )
             conditions = ConditionsComponent(
                 pos=Position(
-                    x=RightAlignedWith(self.width - self.padding),
+                    x=RightAlignedWith(self.right_edge),
                     y=Below(temp, padding=25),
                 ),
                 weather=weather_data,
                 padding=15,
             )
             forecast = ForecastComponent(
-                pos=Position(x=self.padding, y=self.height - 100),
+                pos=Position(
+                    x=self.left_edge,
+                    # TODO: Workaround because ForecastSummary/ForecastComponent doesn't work properly with BottomAlignedWith
+                    y=self.bottom_edge - 60,
+                ),
                 count=5,
                 day_padding=10,
             )
             precipitation = PrecipitationBanner(
-                pos=Position(x=self.padding, y=Above(forecast, padding=15)),
+                pos=Position(x=self.left_edge, y=Above(forecast, padding=15)),
                 weather=weather_data,
             )
             wind = WindComponent(
@@ -96,7 +104,7 @@ class EPaperImagePlanner(ImagePlanner):
             )
             sunlight = SunlightComponent(
                 pos=Position(
-                    x=self.padding,
+                    x=self.left_edge,
                     y=Below(network, padding=15),
                 ),
                 font_size=28,
