@@ -2,7 +2,7 @@ from datetime import datetime
 
 from PIL import ImageDraw
 
-from epaper.components.core import TextComponent
+from epaper.components.text import TextComponent
 from epaper.components.fonts import font
 from epaper.data.location import tz
 

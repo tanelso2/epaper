@@ -6,8 +6,8 @@ from epaper.components.core import (
     MatchAlignedWith,
     Below,
     Position,
-    TextComponent,
 )
+from epaper.components.text import TextComponent
 from epaper.components.fonts import font
 from epaper.data.location import tz
 from epaper.data.sunlight import hours_of_sunlight, next_sun_event, get_sunlight

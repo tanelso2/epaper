@@ -1,36 +1,30 @@
 from datetime import datetime
-from functools import cached_property
 import logging
-import math
 from typing import override, List, Optional
 
-from PIL import ImageDraw
 
 from epaper.components.core import (
     AlignedWith,
     Below,
     BottomAlignedWith,
-    BoundingBox,
     CenteredOn,
     Component,
     CompositeComponent,
-    LabeledValueComponent,
     LeftOf,
     MatchAlignedWith,
     Position,
     RightAlignedWith,
     RightOf,
-    TextComponent,
 )
 from epaper.components.fonts import font
 from epaper.components.shapes import CircleComponent, RotatingArrowComponent
+from epaper.components.text import LabeledValueComponent, TextComponent
 from epaper.data.location import tz
 from epaper.data.weather import (
     CurrentWeather,
     get_current_weather,
     get_5_day_forecast,
 )
-from epaper.drawing.arrow import draw_arrow
 from epaper.utils.angles import add_degrees, invert_degrees, invert_y, project_from
 from epaper.utils.wind import cardinal_direction
 import epaper.utils.wind_direction_constants as dirs

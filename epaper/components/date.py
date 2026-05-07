@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from epaper.components.core import TextComponent
 from epaper.components.fonts import font
+from epaper.components.text import TextComponent
 from epaper.data.location import tz
 
 

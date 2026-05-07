@@ -1,4 +1,4 @@
-from epaper.components.core import (
+from epaper.components.text import (
     TextComponent,
 )
 from epaper.components.fonts import font
