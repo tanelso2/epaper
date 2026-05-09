@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 from functools import partial
 import logging
+from typing import override
 
 from PIL import Image
 
-from epaper.display.protocol import EPDDisplay
+from epaper.display.protocol import EPDDisplay, ImageBuffer
 
 logger = logging.getLogger(__name__)
 
@@ -49,16 +50,16 @@ class MockEPD(EPDDisplay):
         logger.debug("Doing nothing instead of getbuffer_4Gray. Returning empty list")
         return []
 
-    def display(self, image: Image.Image) -> None:
+    def display(self, image: ImageBuffer) -> None:
         self.do_nothing("display", image)
 
-    def display_4Gray(self, image: Image.Image) -> None:
+    def display_4Gray(self, image: ImageBuffer) -> None:
         self.do_nothing("display_4Gray", image)
 
     def display_Partial(
-        self, image: Image.Image, Xstart: int, Ystart: int, Xend: int, Yend: int
+        self, Image: ImageBuffer, Xstart: int, Ystart: int, Xend: int, Yend: int
     ) -> None:
-        self.do_nothing("display_Partial", image, Xstart, Ystart, Xend, Yend)
+        self.do_nothing("display_Partial", Image, Xstart, Ystart, Xend, Yend)
 
     def Clear(self):
         self.do_nothing("Clear")
