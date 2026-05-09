@@ -352,7 +352,6 @@ class WindDirectionArrowComponent(CompositeComponent):
         degs = [add_degrees(north, 90.0 * i) for i in range(4)]
         deg_names = ["N", "W", "S", "E"]
         for deg, label in zip(degs, deg_names):
-            logger.debug(f"{circle.center=}")
             x, y = project_from(
                 center, length=(circle.size / 2.0) + label_padding, deg=invert_y(deg)
             )

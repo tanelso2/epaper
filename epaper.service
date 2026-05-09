@@ -5,7 +5,7 @@ Description = "epaper updater"
 Type=simple
 Restart=always
 WorkingDirectory=/home/tnelson/epaper
-ExecStart=/home/tnelson/epaper/run.py run-async
+ExecStart=/home/tnelson/epaper/run.py --debug --update-delay 5 run-async --threaded
 User=tnelson
 
 [Install]

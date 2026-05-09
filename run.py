@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import asyncio
+from dataclasses import dataclass
 import logging
 import sys
 import time
@@ -14,6 +15,7 @@ from epaper.drawing.images.burn_in import BurnInImagePlanner
 from epaper.drawing.images.epaper import EPaperImagePlanner
 from epaper.display.helpers import reset_screen, display_full_Partial
 from epaper.display.wrapper import get_display_instance, get_display_wrapper
+from epaper.log_config import setup_logging
 
 
 logger = logging.getLogger(__name__)
@@ -47,10 +49,7 @@ def cli(debug, use_mock_display, draw_bounding_boxes, update_delay):
     using_mock_display = use_mock_display
     drawing_bounding_boxes = draw_bounding_boxes
     UPDATE_DELAY = update_delay
-    if debug:
-        logging.basicConfig(level=logging.DEBUG)
-    else:
-        logging.basicConfig(level=logging.INFO)
+    setup_logging(debug=debug)
 
 
 def update_loop():
@@ -98,7 +97,7 @@ async def async_update_loop(
                 await reset_strategy.reset_display(e)
                 logger.info("Writing new image")
                 await e.display_full_partial(img)
-        logger.debug("Sleeping for %d seconds", update_delay)
+        logger.debug("Sleeping for %f seconds", update_delay)
         await asyncio.sleep(update_delay)
 
 

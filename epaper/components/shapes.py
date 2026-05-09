@@ -28,12 +28,8 @@ class CircleComponent(Component):
     @property
     def center(self) -> tuple[int, int]:
         x_pos, y_pos = self.position
-        logger.debug(
-            f"In circle, {x_pos=}, {y_pos=} and {self.radius=} and {self.padding=}"
-        )
         new_x = int(x_pos + self.radius + self.padding)
         new_y = int(y_pos + self.radius + self.padding)
-        logger.debug(f"Center of circle is {(new_x, new_y)}")
         return (new_x, new_y)
 
     @property
@@ -82,7 +78,6 @@ class RotatingArrowComponent(Component):
         r = self.radius
         center_x = int(x + r)
         center_y = int(y + r)
-        logger.debug(f"Center of arrow is {(center_x, center_y)}")
         return (center_x, center_y)
 
     @cached_property
