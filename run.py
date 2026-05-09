@@ -74,7 +74,7 @@ def update_loop():
         time.sleep(UPDATE_DELAY)
 
 
-reset_strategy: resets.ResetStrategy = resets.ResetByReInit()
+reset_strategy: resets.ResetStrategy = resets.ResetBySleepThenReInit()
 
 
 async def async_update_loop(
@@ -96,6 +96,7 @@ async def async_update_loop(
             case Image.Image():
                 logger.info("Resetting display")
                 logger.debug("Open fds before resetting display: %d", count_open_fds())
+                logger.debug(f"Using reset_strategy: {reset_strategy.name}")
                 await reset_strategy.reset_display(e)
                 logger.info("Writing new image")
                 logger.debug("Open fds before displaying image: %d", count_open_fds())
