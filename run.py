@@ -10,6 +10,7 @@ import click
 from PIL import Image
 
 import epaper.display.resets as resets
+from epaper.data.file_descriptors import count_open_fds
 from epaper.drawing.components import ImagePlanner, ImagePlannerConstructor
 from epaper.drawing.images.burn_in import BurnInImagePlanner
 from epaper.drawing.images.epaper import EPaperImagePlanner
@@ -94,9 +95,12 @@ async def async_update_loop(
                 logger.error("Error generating image", exc_info=err)
             case Image.Image():
                 logger.info("Resetting display")
+                logger.debug("Open fds before resetting display: %d", count_open_fds())
                 await reset_strategy.reset_display(e)
                 logger.info("Writing new image")
+                logger.debug("Open fds before displaying image: %d", count_open_fds())
                 await e.display_full_partial(img)
+                logger.debug("Open fds after displaying image: %d", count_open_fds())
         logger.debug("Sleeping for %f seconds", update_delay)
         await asyncio.sleep(update_delay)
 

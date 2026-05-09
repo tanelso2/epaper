@@ -28,6 +28,7 @@ from epaper.components.weather import (
     WindDirectionArrowComponent,
 )
 from epaper.data.weather import get_current_weather
+from epaper.utils.decorators import fds_before_after
 
 logger = logging.getLogger(__name__)
 

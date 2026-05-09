@@ -4,6 +4,7 @@ from typing import Protocol, override
 from PIL import Image
 
 from epaper.display.wrapper import AsyncEPDWrapper
+from epaper.utils.decorators import fds_before_after
 import epaper.drawing.colors as colors
 
 
