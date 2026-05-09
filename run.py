@@ -2,10 +2,8 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import logging
-from functools import partial
 import sys
 import time
-from typing import Callable, Optional
 
 import click
 from PIL import Image
@@ -81,9 +79,10 @@ reset_strategy: resets.ResetStrategy = resets.ResetByReInit()
 
 async def async_update_loop(
     image_planner_builder: ImagePlannerConstructor,
-    update_delay: float = UPDATE_DELAY,
+    update_delay: float,
+    threaded: bool = False,
 ):
-    e = get_display_wrapper(use_mock=using_mock_display)
+    e = get_display_wrapper(use_mock=using_mock_display, threaded=threaded)
     image_planner = image_planner_builder(
         e.width, e.height, draw_outlines=drawing_bounding_boxes
     )
@@ -109,10 +108,19 @@ def run():
 
 
 @cli.command()
-def run_async():
+@click.option(
+    "--threaded",
+    is_flag=True,
+    help="Use a threaded executor pool instead of the default process one",
+)
+def run_async(threaded: bool):
     loop = asyncio.new_event_loop()
-    loop.create_task(async_update_loop(EPaperImagePlanner.construct))
-    loop.run_forever()
+    task = loop.create_task(
+        async_update_loop(
+            EPaperImagePlanner.construct, threaded=threaded, update_delay=UPDATE_DELAY
+        )
+    )
+    loop.run_until_complete(task)
 
 
 @cli.command()
@@ -133,10 +141,10 @@ def generate(output_file: str):
 def burn_in_test():
     update_delay = 0.25 if UPDATE_DELAY == DEFAULT_UPDATE_DELAY else UPDATE_DELAY
     loop = asyncio.new_event_loop()
-    loop.create_task(
+    task = loop.create_task(
         async_update_loop(BurnInImagePlanner.construct, update_delay=update_delay)
     )
-    loop.run_forever()
+    loop.run_until_complete(task)
 
 
 if __name__ == "__main__":
