@@ -74,7 +74,6 @@ def test_AsyncToSyncWrapper():
         wrapped.does_not_exist()
 
 
-@pytest.mark.asyncio
 async def test_run_sync_method_in_async_pool():
     pool = ProcessPoolExecutor(max_workers=1)
     e = ExampleSync()
@@ -101,14 +100,12 @@ async def run_async_wrapper_tests(wrapped: SyncToAsyncWrapper[ExampleSync]):
         await wrapped.does_not_exist()
 
 
-@pytest.mark.asyncio
 async def test_SyncToAsyncWrapper_default_pool():
     foo = ExampleSync()
     wrapped = SyncToAsyncWrapper(foo)
     await run_async_wrapper_tests(wrapped)
 
 
-@pytest.mark.asyncio
 async def test_SyncToAsyncWrapper_threaded_pool():
     foo = ExampleSync()
     wrapped = SyncToAsyncWrapper(
@@ -117,7 +114,6 @@ async def test_SyncToAsyncWrapper_threaded_pool():
     await run_async_wrapper_tests(wrapped)
 
 
-@pytest.mark.asyncio
 async def test_SyncToAsyncWrapper_outside_pool():
     pool = ProcessPoolExecutor(max_workers=1)
     foo = ExampleSync()
