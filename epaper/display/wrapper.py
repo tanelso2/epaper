@@ -46,6 +46,8 @@ class AsyncEPDWrapper:
 
     async def init(self):
         await self._async.init()
+
+    async def init_part(self):
         await self._async.init_part()
 
     async def init_fast(self):
@@ -53,6 +55,9 @@ class AsyncEPDWrapper:
 
     async def clear(self):
         await self._async.Clear()
+
+    async def sleep(self):
+        await self._async.sleep()
 
 
 def get_display_wrapper(
