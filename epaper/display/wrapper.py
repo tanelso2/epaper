@@ -50,20 +50,36 @@ class AsyncEPDWrapper:
         image = Image.new("1", (self.height, self.width), color)
         await self.display_image(image)
 
-    async def display_and_sleep(self, img: Image.Image) -> None:
+    async def display_and_sleep(self, img: Image.Image, partial=True) -> None:
         match self._init_status:
             case None:
-                await self.init()
+                await self.init("partial" if partial else "default")
             case _:
                 logger.debug(
                     "Display already initialized with mode %s", self._init_status
                 )
-        await self.display_image(img)
+        if partial:
+            await self.display_full_partial(img)
+        else:
+            await self.display_image(img)
         await self.sleep()
 
-    async def init(self):
-        await self._async.init()
-        self._init_status = "default"
+    async def init(self, mode: EPDInitMode = "default"):
+        if self._init_status is not None:
+            raise IOError(
+                f"Cannot initialize connection, already connected with mode {self._init_status}"
+            )
+        match mode:
+            case "default":
+                await self._async.init()
+            case "partial":
+                await self._async.init_part()
+            case "fast":
+                await self._async.init_fast()
+        self._init_status = mode
+        logger.debug(
+            "Initialized connection to display with mode %s", self._init_status
+        )
 
     async def init_part(self):
         await self._async.init_part()
