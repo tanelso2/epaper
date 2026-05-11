@@ -23,7 +23,9 @@ class DontReset(ResetStrategy):
     Nothing.
     """
 
-    pass
+    @override
+    async def reset_display(self, e: AsyncEPDWrapper) -> None:
+        pass
 
 
 # class ResetByClear(ResetStrategy):

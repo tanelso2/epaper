@@ -74,7 +74,7 @@ def update_loop():
         time.sleep(UPDATE_DELAY)
 
 
-reset_strategy: resets.ResetStrategy = resets.ResetBySleepThenReInit()
+reset_strategy: resets.ResetStrategy = resets.DontReset()
 
 
 async def async_update_loop(
@@ -86,8 +86,9 @@ async def async_update_loop(
     image_planner = image_planner_builder(
         e.width, e.height, draw_outlines=drawing_bounding_boxes
     )
-    await e.init()
+    await e.init_fast()
     await e.blank_screen()
+    await e.sleep()
     while True:
         img = image_planner.generate()
         match img:
@@ -100,7 +101,7 @@ async def async_update_loop(
                 await reset_strategy.reset_display(e)
                 logger.info("Writing new image")
                 logger.debug("Open fds before displaying image: %d", count_open_fds())
-                await e.display_full_partial(img)
+                await e.display_and_sleep(img)
                 logger.debug("Open fds after displaying image: %d", count_open_fds())
         logger.debug("Sleeping for %f seconds", update_delay)
         await asyncio.sleep(update_delay)

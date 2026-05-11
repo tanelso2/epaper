@@ -1,7 +1,7 @@
 from concurrent.futures import Executor
 import logging
 import sys
-from typing import Optional
+from typing import Optional, Literal
 
 from PIL import Image
 
@@ -12,8 +12,14 @@ from epaper.utils.async_wrapper import PoolConfig, SyncToAsyncWrapper
 
 logger = logging.getLogger(__name__)
 
+type EPDInitMode = Literal["default", "partial", "fast", "4Gray"]
+
 
 class AsyncEPDWrapper:
+    _inner: EPDDisplay
+    _async: SyncToAsyncWrapper[EPDDisplay]
+    _init_status: Optional[EPDInitMode]
+
     def __init__(
         self, e: EPDDisplay, pool: PoolConfig | Executor | None = None
     ) -> None:
@@ -44,20 +50,35 @@ class AsyncEPDWrapper:
         image = Image.new("1", (self.height, self.width), color)
         await self.display_image(image)
 
+    async def display_and_sleep(self, img: Image.Image) -> None:
+        match self._init_status:
+            case None:
+                await self.init()
+            case _:
+                logger.debug(
+                    "Display already initialized with mode %s", self._init_status
+                )
+        await self.display_image(img)
+        await self.sleep()
+
     async def init(self):
         await self._async.init()
+        self._init_status = "default"
 
     async def init_part(self):
         await self._async.init_part()
+        self._init_status = "partial"
 
     async def init_fast(self):
         await self._async.init_fast()
+        self._init_status = "fast"
 
     async def clear(self):
         await self._async.Clear()
 
     async def sleep(self):
         await self._async.sleep()
+        self._init_status = None
 
 
 def get_display_wrapper(
