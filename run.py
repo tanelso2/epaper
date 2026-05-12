@@ -9,7 +9,6 @@ import time
 import click
 from PIL import Image
 
-import epaper.display.resets as resets
 from epaper.data.file_descriptors import count_open_fds
 from epaper.drawing.components import ImagePlanner, ImagePlannerConstructor
 from epaper.drawing.images.burn_in import BurnInImagePlanner
@@ -74,9 +73,6 @@ def update_loop():
         time.sleep(UPDATE_DELAY)
 
 
-reset_strategy: resets.ResetStrategy = resets.DontReset()
-
-
 async def async_update_loop(
     image_planner_builder: ImagePlannerConstructor,
     update_delay: float,
@@ -86,19 +82,12 @@ async def async_update_loop(
     image_planner = image_planner_builder(
         e.width, e.height, draw_outlines=drawing_bounding_boxes
     )
-    await e.init_fast()
-    await e.blank_screen()
-    await e.sleep()
     while True:
         img = image_planner.generate()
         match img:
             case Exception() as err:
                 logger.error("Error generating image", exc_info=err)
             case Image.Image():
-                logger.info("Resetting display")
-                logger.debug("Open fds before resetting display: %d", count_open_fds())
-                logger.debug(f"Using reset_strategy: {reset_strategy.name}")
-                await reset_strategy.reset_display(e)
                 logger.info("Writing new image")
                 logger.debug("Open fds before displaying image: %d", count_open_fds())
                 await e.display_and_sleep(img)
